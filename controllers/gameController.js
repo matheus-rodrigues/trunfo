@@ -1,25 +1,42 @@
-import { addPlayer, removePlayer, broadcast, playCard } from "../models/gameModel.js";
+import GameModel from "../models/gameModel.js";
 
-export function handleConnection(ws) {
-  addPlayer(ws);
+let game;
 
-  ws.on("message", (data) => {
-    const msg = JSON.parse(data);
+export function setupGame(io) {
+  game = new GameModel();
 
-    if (msg.type === "play") {
-      const result = playCard(msg.playerId, msg.card, msg.x, msg.y);
-      if (result.error) {
-        ws.send(JSON.stringify({ type: "error", message: result.error }));
+  io.on("connection", (socket) => {
+    console.log("Novo jogador conectado:", socket.id);
+
+    const playerId = game.addPlayer(socket.id);
+    console.log("Player ID:", playerId);
+
+    socket.emit("init", {
+      playerId,
+      hand: game.hands[playerId],
+      board: game.board,
+      currentTurn: game.currentTurn
+    });
+
+    io.emit("status", { message: `Jogador ${playerId + 1} entrou no jogo!` });
+
+    socket.on("play", ({ card, x, y, playerId }) => {
+      const result = game.playCard(playerId, card, x, y);
+
+      if (!result.success) {
+        socket.emit("error", result.message);
       } else {
-        broadcast({
-          type: "update",
-          board: result.board,
-          hands: result.hands,
-          currentTurn: result.currentTurn,
+        io.emit("update", {
+          board: game.board,
+          hands: game.hands,
+          currentTurn: game.currentTurn
         });
       }
-    }
-  });
+    });
 
-  ws.on("close", () => removePlayer(ws));
+    socket.on("draw", (playerId) => {
+      const card = game.drawCard(playerId);
+      socket.emit("drawn", card);
+    });
+  });
 }

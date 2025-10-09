@@ -1,17 +1,16 @@
 import express from "express";
-import { WebSocketServer } from "ws";
-import { handleConnection } from "./controllers/gameController.js";
+import http from "http";
+import { Server } from "socket.io";
+import { setupGame } from "./controllers/gameController.js";
 
 const app = express();
-const PORT = 3000;
+const server = http.createServer(app);
+const io = new Server(server);
 
-// Servir os arquivos estáticos (front-end)
 app.use(express.static("public"));
 
-// Cria o servidor HTTP e o servidor WebSocket
-const server = app.listen(PORT, () => {
-  console.log(`🔥 Servidor rodando em http://localhost:${PORT}`);
-});
+setupGame(io);
 
-const wss = new WebSocketServer({ server });
-wss.on("connection", handleConnection);
+server.listen(3000, () => {
+  console.log("Servidor rodando em http://localhost:3000");
+});

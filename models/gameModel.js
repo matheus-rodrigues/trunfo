@@ -1,85 +1,91 @@
-const players = [];
-let board = Array(5)
-  .fill(null)
-  .map(() => Array(5).fill(null));
-
-let currentTurn = 0; // índice do jogador (0 ou 1)
-let hands = {}; // { playerId: [cartas] }
-
-function generateCards() {
-  const allCards = [
-    "Dragão", "Mago", "Cavaleiro", "Elfo",
-    "Gigante", "Guerreiro", "Anjo", "Demônio",
-    "Fada", "Zumbi", "Troll", "Orc"
-  ];
-  return Array.from({ length: 4 }, () =>
-    allCards[Math.floor(Math.random() * allCards.length)]
-  );
-}
-
-export function addPlayer(ws) {
-  if (players.length >= 2) {
-    ws.send(JSON.stringify({ type: "error", message: "Sala cheia!" }));
-    ws.close();
-    return;
+export default class GameModel {
+  constructor() {
+    this.players = [];
+    this.board = Array(5)
+      .fill(null)
+      .map(() => Array(5).fill(null));
+    this.deck = this.createDeck();
+    this.currentTurn = 0;
+    this.hands = {};
   }
 
-  players.push(ws);
-  const playerId = players.length - 1;
-  hands[playerId] = generateCards();
-
-  ws.send(
-    JSON.stringify({
-      type: "init",
-      board,
-      hand: hands[playerId],
-      playerId,
-      currentTurn,
-    })
-  );
-
-  // Atualiza todos sobre o novo jogador
-  broadcast({
-    type: "status",
-    message: `Jogador ${playerId + 1} entrou no jogo.`,
-    currentTurn,
-  });
-}
-
-export function removePlayer(ws) {
-  const index = players.indexOf(ws);
-  if (index !== -1) players.splice(index, 1);
-}
-
-export function playCard(playerId, card, x, y) {
-  if (playerId !== currentTurn)
-    return { error: "Não é sua vez!" };
-
-  if (board[y][x] !== null)
-    return { error: "Essa posição já está ocupada!" };
-
-  const cardIndex = hands[playerId].indexOf(card);
-  if (cardIndex === -1)
-    return { error: "Carta não encontrada!" };
-
-  // Coloca a carta no board e remove da mão
-  board[y][x] = { playerId, card };
-  hands[playerId].splice(cardIndex, 1);
-
-  // Passa a vez
-  currentTurn = currentTurn === 0 ? 1 : 0;
-
-  return {
-    board,
-    hands,
-    currentTurn,
-  };
-}
-
-export function broadcast(data) {
-  for (const player of players) {
-    if (player.readyState === player.OPEN) {
-      player.send(JSON.stringify(data));
+  createDeck() {
+    const suits = ["♠", "♣", "♥", "♦"];
+    const values = [
+      "A",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "J",
+      "Q",
+      "K"
+    ];
+    const deck = [];
+    for (const suit of suits) {
+      for (const value of values) {
+        deck.push({ suit, value });
+      }
     }
+    return this.shuffle(deck);
+  }
+
+  shuffle(deck) {
+    return deck.sort(() => Math.random() - 0.5);
+  }
+
+  addPlayer(socketId) {
+    const playerId = this.players.length;
+    this.players.push(socketId);
+    this.hands[playerId] = [];
+    // dá 4 cartas iniciais
+    for (let i = 0; i < 4; i++) {
+      this.hands[playerId].push(this.deck.pop());
+    }
+    return playerId;
+  }
+
+  drawCard(playerId) {
+    if (!this.hands[playerId]) return null;
+    if (this.deck.length === 0) return null;
+    const card = this.deck.pop();
+    this.hands[playerId].push(card);
+    return card;
+  }
+
+  playCard(playerId, card, x, y) {
+    if (playerId !== this.currentTurn) {
+      return { success: false, message: "Não é a sua vez!" };
+    }
+
+    if (x < 0 || x > 4 || y < 0 || y > 4) {
+      return { success: false, message: "Posição inválida!" };
+    }
+
+    if (this.board[y][x]) {
+      return { success: false, message: "Esta posição já está ocupada!" };
+    }
+
+    // verifica se a carta existe na mão
+    const hand = this.hands[playerId];
+    const index = hand.findIndex(
+      (c) => c.suit === card.suit && c.value === card.value
+    );
+    if (index === -1) {
+      return { success: false, message: "Carta inválida!" };
+    }
+
+    // remove da mão e coloca no board
+    this.board[y][x] = hand.splice(index, 1)[0];
+
+    // passa a vez
+    this.currentTurn = (this.currentTurn + 1) % this.players.length;
+
+    return { success: true };
   }
 }

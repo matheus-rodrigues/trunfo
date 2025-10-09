@@ -1,75 +1,92 @@
-const ws = new WebSocket("ws://localhost:3000");
+const socket = io();
 let playerId = null;
-let currentTurn = null;
+let currentTurn = 0;
 let hand = [];
-let board = [];
-
-ws.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-
-  if (data.type === "init") {
-    playerId = data.playerId;
-    currentTurn = data.currentTurn;
-    hand = data.hand;
-    board = data.board;
-    renderBoard();
-    renderHand();
-    updateTurnInfo();
-  }
-
-  if (data.type === "update") {
-    board = data.board;
-    currentTurn = data.currentTurn;
-    hand = data.hands[playerId];
-    renderBoard();
-    renderHand();
-    updateTurnInfo();
-  }
-
-  if (data.type === "error") alert(data.message);
-  if (data.type === "status") updateTurnInfo(data.message);
-};
-
-function updateTurnInfo(extraMsg = "") {
-  const el = document.getElementById("turn-info");
-  el.textContent = extraMsg || (currentTurn === playerId
-    ? "Sua vez de jogar!"
-    : "Aguarde o outro jogador...");
-}
-
-function renderBoard() {
-  const boardDiv = document.getElementById("board");
-  boardDiv.innerHTML = "";
-  board.forEach((row, y) => {
-    row.forEach((cell, x) => {
-      const slot = document.createElement("div");
-      slot.className = "slot";
-      slot.textContent = cell ? cell.card[0] : "";
-      slot.onclick = () => handleSlotClick(x, y);
-      boardDiv.appendChild(slot);
-    });
-  });
-}
-
-function renderHand() {
-  const handDiv = document.getElementById("hand");
-  handDiv.innerHTML = "";
-  hand.forEach((card) => {
-    const c = document.createElement("button");
-    c.textContent = card;
-    c.onclick = () => selectCard(card);
-    handDiv.appendChild(c);
-  });
-}
-
 let selectedCard = null;
-function selectCard(card) {
-  selectedCard = card;
-  alert(`Carta selecionada: ${card}. Escolha uma posição no tabuleiro.`);
+
+const boardEl = document.getElementById("board");
+const handEl = document.getElementById("hand");
+const messageEl = document.getElementById("message");
+const turnEl = document.getElementById("turn");
+
+// Renderiza tabuleiro
+function renderBoard(board) {
+  boardEl.innerHTML = "";
+  for (let y = 0; y < 5; y++) {
+    for (let x = 0; x < 5; x++) {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      const card = board[y][x];
+      if (card) {
+        cell.innerHTML = `<div class="card ${
+          card.suit === "♥" || card.suit === "♦" ? "red" : "black"
+        }">${card.value}${card.suit}</div>`;
+      }
+      cell.addEventListener("click", () => tryPlayCard(x, y));
+      boardEl.appendChild(cell);
+    }
+  }
 }
 
-function handleSlotClick(x, y) {
-  if (!selectedCard) return alert("Selecione uma carta primeiro!");
-  ws.send(JSON.stringify({ type: "play", playerId, card: selectedCard, x, y }));
-  selectedCard = null;
+// Renderiza mão
+function renderHand() {
+  handEl.innerHTML = "";
+  hand.forEach((card, index) => {
+    const div = document.createElement("div");
+    div.className = `card ${
+      card.suit === "♥" || card.suit === "♦" ? "red" : "black"
+    }`;
+    div.textContent = `${card.value}${card.suit}`;
+    div.addEventListener("click", () => selectCard(index));
+    if (selectedCard === index) div.classList.add("selected");
+    handEl.appendChild(div);
+  });
+}
+
+// Seleciona carta
+function selectCard(index) {
+  selectedCard = selectedCard === index ? null : index;
+  renderHand();
+}
+
+// Mostra mensagem
+function showMessage(text) {
+  messageEl.textContent = text;
+  if (text) setTimeout(() => (messageEl.textContent = ""), 3000);
+}
+
+// Tenta jogar carta
+function tryPlayCard(x, y) {
+  if (selectedCard === null) {
+    showMessage("Selecione uma carta antes de jogar.");
+    return;
+  }
+  const card = hand[selectedCard];
+  socket.emit("play", { card, x, y, playerId });
+}
+
+// Recebe dados do servidor
+socket.on("init", (data) => {
+  playerId = data.playerId;
+  hand = data.hand;
+  currentTurn = data.currentTurn;
+  renderBoard(data.board);
+  renderHand();
+  updateTurn();
+});
+
+socket.on("update", (data) => {
+  currentTurn = data.currentTurn;
+  hand = data.hands[playerId];
+  renderBoard(data.board);
+  renderHand();
+  updateTurn();
+});
+
+socket.on("error", (msg) => showMessage(msg));
+
+socket.on("status", (data) => showMessage(data.message));
+
+function updateTurn() {
+  turnEl.textContent = `Vez do jogador ${currentTurn + 1}`;
 }

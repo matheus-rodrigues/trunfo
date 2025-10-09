@@ -1,49 +1,112 @@
+/* RESET */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Arial', sans-serif;
+}
+
+/* Body */
 body {
-  font-family: Arial, sans-serif;
-  text-align: center;
-  background: #111;
-  color: #eee;
+  background: #2e7d32;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100vh;
+  padding: 20px;
+  color: #fff;
 }
 
-.board {
+/* Board */
+#board {
   display: grid;
-  grid-template-columns: repeat(5, 60px);
-  grid-gap: 5px;
-  justify-content: center;
-  margin: 20px auto;
+  grid-template-columns: repeat(5, 80px);
+  grid-template-rows: repeat(5, 120px);
+  gap: 10px;
+  margin-bottom: 30px;
 }
 
-.slot {
-  width: 60px;
-  height: 60px;
-  background: #222;
-  border: 1px solid #555;
+.cell {
+  background: #a5d6a7;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
   cursor: pointer;
-  color: white;
+  transition: transform 0.2s;
 }
 
-.slot:hover {
-  background: #333;
+.cell:hover {
+  transform: scale(1.05);
 }
 
-.hand {
+/* Carta no board */
+.card {
+  width: 70px;
+  height: 100px;
+  border-radius: 10px;
+  border: 2px solid #000;
   display: flex;
+  align-items: center;
   justify-content: center;
-  gap: 10px;
+  font-weight: bold;
+  font-size: 18px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+  background: white;
+  color: black;
+  text-align: center;
 }
 
-button {
-  padding: 10px;
-  background: #444;
-  color: #fff;
-  border: none;
+/* Cartas vermelhas e pretas */
+.red {
+  color: red;
+}
+
+.black {
+  color: black;
+}
+
+/* Carta selecionada */
+.selected {
+  border: 3px solid yellow;
+  box-shadow: 0 0 10px yellow;
+}
+
+/* Mão do jogador */
+#hand {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+#hand .card {
   cursor: pointer;
-  border-radius: 4px;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
-button:hover {
-  background: #666;
+#hand .card:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 15px rgba(255,255,0,0.7);
+}
+
+/* Mensagens */
+#message {
+  margin-top: 10px;
+  font-size: 16px;
+  min-height: 24px;
+  padding: 5px 10px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 5px;
+  text-align: center;
+  color: #fff;
+}
+
+/* Indicador de vez */
+#turnIndicator {
+  margin-bottom: 20px;
+  font-size: 18px;
+  font-weight: bold;
 }

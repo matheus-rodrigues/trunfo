@@ -1,17 +1,22 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Trunfo.io</title>
-    <link rel="stylesheet" href="style.css" />
-    <script src="/socket.io/socket.io.js"></script>
-    <script type="module" src="script.js"></script>
-  </head>
-  <body>
-    <h1>Trunfo.io</h1>
-    <div id="turn"></div>
-    <div id="board" class="board"></div>
-    <div id="hand" class="hand"></div>
+<head>
+  <meta charset="UTF-8" />
+  <title>Jogo de Cartas</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="game-container">
+    <h1>♠ TRUNFO ♣</h1>
+    <div id="turn-indicator"></div>
     <div id="message"></div>
-  </body>
+
+    <div id="board" class="board"></div>
+
+    <h2>Sua Mão</h2>
+    <div id="hand" class="hand"></div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
 </html>

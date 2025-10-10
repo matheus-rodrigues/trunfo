@@ -1,42 +1,94 @@
-import GameModel from "../models/gameModel.js";
+// controllers/gameController.js
+import { GameModel } from "../models/gameModel.js";
 
-let game;
+/**
+ * Exporta setupGameController(wss)
+ * - wss: instancia de WebSocketServer (da lib 'ws')
+ *
+ * Mensagens enviadas ao cliente:
+ *  - { type: "init", playerId, hand, board, currentTurn }
+ *  - { type: "update", board, hands, currentTurn }
+ *  - { error: "mensagem" } (somente para o cliente que errou)
+ */
+export function setupGameController(wss) {
+  const game = new GameModel();
 
-export function setupGame(io) {
-  game = new GameModel();
-
-  io.on("connection", (socket) => {
-    console.log("Novo jogador conectado:", socket.id);
-
-    const playerId = game.addPlayer(socket.id);
-    console.log("Player ID:", playerId);
-
-    socket.emit("init", {
-      playerId,
-      hand: game.hands[playerId],
-      board: game.board,
-      currentTurn: game.currentTurn
+  // helper para broadcast do estado atual
+  function broadcastState() {
+    const state = game.getState();
+    const payload = JSON.stringify({
+      type: "update",
+      board: state.board,
+      hands: state.hands,
+      currentTurn: state.currentTurn,
     });
 
-    io.emit("status", { message: `Jogador ${playerId + 1} entrou no jogo!` });
+    wss.clients.forEach((client) => {
+      if (client.readyState === 1) client.send(payload);
+    });
+  }
 
-    socket.on("play", ({ card, x, y, playerId }) => {
-      const result = game.playCard(playerId, card, x, y);
+  wss.on("connection", (ws) => {
+    console.log("Cliente conectado (ws)");
 
-      if (!result.success) {
-        socket.emit("error", result.message);
-      } else {
-        io.emit("update", {
-          board: game.board,
-          hands: game.hands,
-          currentTurn: game.currentTurn
-        });
+    // Cria jogador e retorna playerId (número)
+    const playerId = game.addPlayer();
+    ws.playerId = playerId;
+
+    // Envia estado inicial somente para este cliente
+    ws.send(
+      JSON.stringify({
+        type: "init",
+        playerId,
+        hand: game.hands[playerId],
+        board: game.board,
+        currentTurn: game.currentTurn,
+      })
+    );
+
+    // Em seguida, atualiza todos (para que o novo jogador e o outro vejam o estado)
+    broadcastState();
+
+    ws.on("message", (msg) => {
+      let data;
+      try {
+        data = JSON.parse(msg.toString());
+      } catch (err) {
+        ws.send(JSON.stringify({ error: "Payload JSON inválido" }));
+        return;
       }
+
+      if (data.type === "play") {
+        // Segurança: garantir que o playerId enviado bate com o playerId da conexão
+        if (data.playerId !== ws.playerId) {
+          ws.send(JSON.stringify({ error: "playerId inválido/forjado" }));
+          return;
+        }
+
+        // Esperamos que data.card seja { value, suit } e data.x seja índice 0..4
+        const result = game.playCard(data.playerId, data.card, data.x);
+        if (!result.success) {
+          ws.send(JSON.stringify({ error: result.message }));
+          return;
+        }
+
+        // Sucesso -> broadcast para todos
+        broadcastState();
+      }
+
+      // (ponto de extensão: mais eventos como 'draw' podem ser adicionados aqui)
     });
 
-    socket.on("draw", (playerId) => {
-      const card = game.drawCard(playerId);
-      socket.emit("drawn", card);
+    ws.on("close", () => {
+      console.log("Cliente desconectou:", ws.playerId);
+      game.removePlayer(ws.playerId);
+      broadcastState();
+    });
+
+    ws.on("error", (err) => {
+      console.error("WS error:", err);
     });
   });
+
+  console.log("Game controller configurado no WebSocketServer.");
 }

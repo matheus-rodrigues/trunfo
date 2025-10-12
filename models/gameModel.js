@@ -1,137 +1,150 @@
-// models/gameModel.js
+import { generateDeck } from "./utils/deckUtils.js";
+import {
+  getInitialMissions,
+  getNewMissionOfSameDifficulty,
+  checkMissionCompleted,
+} from "./utils/missionUtils.js";
+
 export class GameModel {
   constructor() {
-    this.nextId = 0; // para gerar ids (0,1,...)
-    this.players = []; // lista de playerIds ativos
-    this.hands = {}; // mapa playerId -> array de cartas
-    this.deck = this._createShuffledDeck(); // deck embaralhado (LIFO: pop())
-    this.board = [Array(5).fill(null)]; // board 1x5: board[0][0..4]
-    this.currentTurn = null; // playerId que tem a vez
+    this.reset();
   }
 
-  _createShuffledDeck() {
-    const suits = ["♠", "♣", "♥", "♦"];
-    const values = [
-      "A",
-      "2",
-      "3",
-      "4",
-      "5",
-      "6",
-      "7",
-      "8",
-      "9",
-      "10",
-      "J",
-      "Q",
-      "K",
-    ];
-    const deck = [];
-    for (const s of suits) {
-      for (const v of values) {
-        deck.push({ suit: s, value: v });
+  reset() {
+    this.players = {};
+    this.deck = generateDeck();
+    this.board = Array(5).fill(null);
+    this.currentTurn = null;
+    this.lockedSlots = [];
+    this.turnCount = 1;
+  }
+
+  drawCard(deck) {
+    return deck.pop();
+  }
+
+  addPlayer(id) {
+    if (Object.keys(this.players).length >= 2) return;
+
+    this.players[id] = {
+      id,
+      hand: [
+        this.drawCard(this.deck),
+        this.drawCard(this.deck),
+        this.drawCard(this.deck),
+        this.drawCard(this.deck),
+      ],
+      missions: getInitialMissions().map((m) => ({ ...m, completed: false })),
+      completedMissions: [],
+      points: 0,
+    };
+
+    if (Object.keys(this.players).length === 2 && !this.currentTurn) {
+      this.currentTurn = Object.keys(this.players)[0];
+    }
+  }
+
+  removePlayer(id) {
+    delete this.players[id];
+    if (Object.keys(this.players).length === 0) this.reset();
+  }
+
+  isReady() {
+    return Object.keys(this.players).length === 2;
+  }
+
+  playCard(playerId, cardIndex, slotIndex) {
+    if (this.currentTurn !== playerId) {
+      return { error: "Não é a sua vez!" };
+    }
+
+    if (!this.players[playerId] || !this.players[playerId].hand[cardIndex]) {
+      return { error: "Carta inválida!" };
+    }
+
+    const boardIsFull = this.board.every((c) => c !== null);
+    if (!boardIsFull && this.board[slotIndex]) {
+      return { error: "Só pode sobrepor cartas quando o board estiver cheio!" };
+    }
+
+    if (boardIsFull && this.lockedSlots.includes(slotIndex)) {
+      return { error: "Este slot está bloqueado!" };
+    }
+
+    const card = this.players[playerId].hand.splice(cardIndex, 1)[0];
+    this.board[slotIndex] = card;
+
+    Object.values(this.players).forEach((p) => {
+      let keepValidating = true;
+      while (keepValidating) {
+        keepValidating = false;
+        for (let idx = 0; idx < p.missions.length; idx++) {
+          const mission = p.missions[idx];
+          if (
+            !mission.completed &&
+            checkMissionCompleted(this.board, mission)
+          ) {
+            const completedMission = { ...mission, completed: true };
+            p.points += completedMission.points;
+            p.completedMissions.push(completedMission);
+
+            p.missions.splice(idx, 1);
+            const newMission = {
+              ...getNewMissionOfSameDifficulty(completedMission),
+              completed: false,
+            };
+            p.missions.splice(idx, 0, newMission);
+
+            if (checkMissionCompleted(this.board, newMission)) {
+              const completedNewMission = { ...newMission, completed: true };
+              p.points += completedNewMission.points;
+              p.completedMissions.push(completedNewMission);
+              p.missions.splice(idx, 1);
+              const anotherMission = {
+                ...getNewMissionOfSameDifficulty(completedNewMission),
+                completed: false,
+              };
+              p.missions.splice(idx, 0, anotherMission);
+              keepValidating = true;
+            }
+
+            keepValidating = true;
+            break;
+          }
+        }
+      }
+    });
+
+    if (!boardIsFull && this.board.every((c) => c !== null)) {
+      const lastTwo = [];
+      for (let i = this.board.length - 1; i >= 0 && lastTwo.length < 2; i--) {
+        if (this.board[i]) lastTwo.unshift(i);
+      }
+      this.lockedSlots = lastTwo;
+    } else if (boardIsFull) {
+      this.lockedSlots.push(slotIndex);
+      if (this.lockedSlots.length > 2) {
+        this.lockedSlots.shift();
       }
     }
-    // Fisher-Yates shuffle
-    for (let i = deck.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [deck[i], deck[j]] = [deck[j], deck[i]];
-    }
-    return deck;
-  }
 
-  // Retorna novo playerId (número)
-  addPlayer() {
-    const id = this.nextId++;
-    this.players.push(id);
-    this.hands[id] = [];
+    this.players[playerId].hand.push(this.drawCard(this.deck));
+    this.turnCount = (this.turnCount || 0) + 1;
 
-    // Dá 4 cartas iniciais
-    for (let i = 0; i < 4; i++) {
-      this._drawToHand(id);
-    }
-
-    // Se não há currentTurn definido, primeiro jogador começa
-    if (this.currentTurn === null) this.currentTurn = id;
-
-    return id;
-  }
-
-  removePlayer(playerId) {
-    const idx = this.players.indexOf(playerId);
-    if (idx !== -1) this.players.splice(idx, 1);
-    delete this.hands[playerId];
-
-    // Ajusta currentTurn se necessário
-    if (this.currentTurn === playerId) {
-      this.currentTurn = this.players.length ? this.players[0] : null;
-    }
-  }
-
-  _drawToHand(playerId) {
-    if (!this.hands[playerId]) this.hands[playerId] = [];
-    if (this.deck.length === 0) return null;
-    const card = this.deck.pop();
-    this.hands[playerId].push(card);
-    return card;
-  }
-
-  // Expõe drawCard (opcional)
-  drawCard(playerId) {
-    return this._drawToHand(playerId);
-  }
-
-  // Jogada de carta: card = { suit, value }, x = 0..4
-  playCard(playerId, card, x) {
-    // validações
-    if (this.currentTurn !== playerId) {
-      return { success: false, message: "Não é a sua vez!" };
-    }
-    if (typeof x !== "number" || x < 0 || x >= 5) {
-      return { success: false, message: "Posição inválida!" };
-    }
-    if (this.board[0][x] !== null) {
-      return { success: false, message: "Posição já ocupada!" };
-    }
-    const hand = this.hands[playerId] || [];
-    const idx = hand.findIndex(
-      (c) => c.suit === card.suit && c.value === card.value
-    );
-    if (idx === -1) {
-      return { success: false, message: "Carta inválida!" };
-    }
-
-    // remove da mão e coloca no board
-    const played = hand.splice(idx, 1)[0];
-    this.board[0][x] = played;
-
-    // quem jogou compra 1 carta (se houver)
-    this._drawToHand(playerId);
-
-    // alterna a vez para o próximo jogador (se houver)
-    if (this.players.length > 1) {
-      const curIdx = this.players.indexOf(playerId);
-      const nextIdx = (curIdx + 1) % this.players.length;
-      this.currentTurn = this.players[nextIdx];
-    } else {
-      // permanece o mesmo jogador se ele for o único conectado
-      this.currentTurn = playerId;
-    }
+    const playerIds = Object.keys(this.players);
+    const next = playerIds.find((id) => id !== playerId);
+    this.currentTurn = next;
 
     return { success: true };
   }
 
-  // Retorna estado serializável
   getState() {
-    // clonamos hands superficialmente para evitar exposição de referências internas
-    const handsCopy = {};
-    this.players.forEach((p) => {
-      handsCopy[p] = (this.hands[p] || []).slice();
-    });
     return {
       board: this.board,
-      hands: handsCopy,
+      players: this.players,
       currentTurn: this.currentTurn,
+      lockedSlots: this.lockedSlots,
+      turnCount: this.turnCount,
     };
   }
 }

@@ -1,158 +1,146 @@
-const socket = new WebSocket("ws://localhost:3000");
-
-let playerId = null;
-let hand = [];
-let board = [];
-let currentTurn = null;
-let selectedCard = null;
+const socket = io();
 
 const boardEl = document.getElementById("board");
 const handEl = document.getElementById("hand");
 const messageEl = document.getElementById("message");
-const turnIndicator = document.getElementById("turn-indicator");
+let state = {};
+const missionsBoardEl = document.getElementById("missions-board");
+const playersBoardEl = document.getElementById("players-board");
+const scoreBarEl = document.getElementById("score-bar");
 
-socket.addEventListener("message", (event) => {
-  const data = JSON.parse(event.data);
-
-  if (data.type === "init") {
-    playerId = data.playerId;
-    hand = data.hand;
-    board = data.board;
-    currentTurn = data.currentTurn;
-    renderBoard();
-    renderHand();
-    updateTurnIndicator();
-  }
-
-  if (data.type === "update") {
-    board = data.board;
-    hand = data.hands[playerId] || [];
-    currentTurn = data.currentTurn;
-    updateBoard();
-    updateHand();
-    updateTurnIndicator();
-  }
-
-  if (data.error) showMessage(data.error);
+socket.on("waiting", (msg) => {
+  messageEl.textContent = msg;
 });
 
-/* === Renderiza apenas uma vez === */
-function renderBoard() {
-  boardEl.innerHTML = "";
-  const row = board[0] || [];
+socket.on("errorMessage", (msg) => {
+  messageEl.textContent = msg;
+});
 
-  row.forEach((card, x) => {
-    const slot = document.createElement("div");
-    slot.className = "slot";
-    slot.dataset.x = x;
+socket.on("state", (gameState) => {
+  state = gameState;
+  // Limpa mensagem de espera ao receber o estado do jogo
+  messageEl.textContent = "";
+  renderGame();
+});
+
+function renderGame() {
+  // Pontuação centralizada (jogador1 X jogador2) e vez do jogador
+  if (state.players) {
+    const playersArr = Object.values(state.players);
+    let scoreText = "";
+    if (playersArr.length === 2) {
+      scoreText = `<span style='color:#fff'>${
+        playersArr[0].points || 0
+      }</span> <span style='color:#ffd700'>X</span> <span style='color:#fff'>${
+        playersArr[1].points || 0
+      }</span>`;
+    } else if (playersArr.length === 1) {
+      scoreText = `<span style='color:#fff'>${
+        playersArr[0].points || 0
+      }</span> <span style='color:#ffd700'>X</span> <span style='color:#fff'>0</span>`;
+    }
+    let vezText = `Vez de: ${
+      state.currentTurn === socket.id ? "Você" : "Oponente"
+    }`;
+    scoreBarEl.innerHTML = `${scoreText}<br><span style='font-size:0.7em;color:#fff'>${vezText}</span>`;
+
+    // Missões concluídas à direita (usa completedMissions)
+    let completedHtml = playersArr
+      .map((p) => {
+        let completed = p.completedMissions || [];
+        if (!completed.length)
+          return `<div style='margin-bottom:18px'><strong>Jogador ${
+            p.id === socket.id ? "(Você)" : p.id
+          }</strong><br><span style='color:#aaa'>Nenhuma missão concluída</span></div>`;
+        return `<div style='margin-bottom:18px'><strong>Jogador ${
+          p.id === socket.id ? "(Você)" : p.id
+        }</strong><ul>${completed
+          .map(
+            (m) =>
+              `<li><span style='color:#ffd700'>${m.description}</span> <span style='color:#aaa'>[${m.points} pts]</span></li>`
+          )
+          .join("")}</ul></div>`;
+      })
+      .join("");
+    playersBoardEl.innerHTML = `<h3>Missões concluídas</h3>${completedHtml}`;
+  }
+  if (!state || !state.players) return;
+
+  const playerId = socket.id;
+  const player = state.players[playerId];
+  if (!player) {
+    messageEl.textContent = "Aguardando outro jogador...";
+    return;
+  }
+
+  // Missões do jogador à esquerda
+  if (player.missions && Array.isArray(player.missions)) {
+    let missionsHtml = player.missions
+      .map((m, idx) => {
+        return `<li${
+          m.completed ? ' style="text-decoration:line-through;color:#aaa"' : ""
+        }><strong>${m.description}</strong> <span style="color:#ffd700">[${
+          m.points
+        } pts]</span></li>`;
+      })
+      .join("");
+    missionsBoardEl.innerHTML = `<h3>Suas missões</h3><ul>${missionsHtml}</ul>`;
+  } else {
+    missionsBoardEl.innerHTML = "";
+  }
+
+  // Mensagem principal removida (agora está no score-bar)
+
+  // Renderiza board
+  boardEl.innerHTML = "";
+
+  state.board.forEach((card, i) => {
+    const div = document.createElement("div");
+    div.classList.add("card-slot");
+
+    if (state.lockedSlots && state.lockedSlots.includes(i)) {
+      div.classList.add("locked");
+    }
 
     if (card) {
-      const cardEl = createCardElement(card);
-      slot.appendChild(cardEl);
+      const cardDiv = document.createElement("div");
+      cardDiv.classList.add("card");
+      cardDiv.classList.add(card.color === "red" ? "red" : "black");
+      cardDiv.textContent = `${card.value}${card.suit}`;
+      div.appendChild(cardDiv);
     }
 
-    slot.addEventListener("click", () => playCard(x));
-    boardEl.appendChild(slot);
-  });
-}
+    div.addEventListener("click", () => {
+      const selected = document.querySelector(".selected");
+      if (selected) {
+        const cardIndex = selected.dataset.index;
+        socket.emit("playCard", {
+          cardIndex: parseInt(cardIndex),
+          slotIndex: i,
+        });
+        selected.classList.remove("selected");
+      }
+    });
 
-function renderHand() {
+    boardEl.appendChild(div);
+  });
+
+  // Renderiza mão
   handEl.innerHTML = "";
-  hand.forEach((card, index) => {
-    const cardEl = createCardElement(card);
-    cardEl.dataset.index = index;
-    cardEl.addEventListener("click", () => selectCard(index));
-    handEl.appendChild(cardEl);
+  player.hand.forEach((card, index) => {
+    const div = document.createElement("div");
+    div.classList.add("card");
+    div.textContent = `${card.value}${card.suit}`;
+    div.classList.add(card.color === "red" ? "red" : "black");
+    div.dataset.index = index;
+
+    div.addEventListener("click", () => {
+      document
+        .querySelectorAll(".card")
+        .forEach((c) => c.classList.remove("selected"));
+      div.classList.add("selected");
+    });
+
+    handEl.appendChild(div);
   });
-}
-
-/* === Atualiza apenas o conteúdo sem recriar === */
-function updateBoard() {
-  const row = board[0] || [];
-  const slots = boardEl.querySelectorAll(".slot");
-
-  row.forEach((card, x) => {
-    const slot = slots[x];
-    const existing = slot.querySelector(".card");
-
-    if (!card && existing) {
-      existing.remove();
-    } else if (card && !existing) {
-      slot.appendChild(createCardElement(card, true));
-    }
-  });
-}
-
-function updateHand() {
-  const current = handEl.querySelectorAll(".card");
-
-  // Remove cartas extras
-  while (current.length > hand.length) {
-    current[current.length - 1].remove();
-  }
-
-  // Atualiza ou adiciona novas
-  hand.forEach((card, index) => {
-    let cardEl = current[index];
-    if (!cardEl) {
-      cardEl = createCardElement(card, true);
-      cardEl.dataset.index = index;
-      cardEl.addEventListener("click", () => selectCard(index));
-      handEl.appendChild(cardEl);
-    } else {
-      cardEl.textContent = `${card.value}${card.suit}`;
-      cardEl.className = `card ${
-        ["♥", "♦"].includes(card.suit) ? "red" : "black"
-      }`;
-      cardEl.dataset.index = index;
-    }
-
-    if (selectedCard === index) cardEl.classList.add("selected");
-    else cardEl.classList.remove("selected");
-  });
-}
-
-function createCardElement(card, smooth = false) {
-  const el = document.createElement("div");
-  el.classList.add("card", ["♥", "♦"].includes(card.suit) ? "red" : "black");
-  el.textContent = `${card.value}${card.suit}`;
-  if (smooth) el.style.transition = "all 0.25s ease";
-  return el;
-}
-
-function selectCard(index) {
-  selectedCard = selectedCard === index ? null : index;
-  updateHand();
-}
-
-function playCard(x) {
-  if (selectedCard === null) {
-    showMessage("Selecione uma carta antes de jogar!");
-    return;
-  }
-  if (playerId !== currentTurn) {
-    showMessage("Não é a sua vez!");
-    return;
-  }
-
-  const card = hand[selectedCard];
-  socket.send(JSON.stringify({ type: "play", playerId, card, x }));
-  selectedCard = null;
-  updateHand();
-}
-
-function showMessage(text) {
-  messageEl.textContent = text;
-  messageEl.style.opacity = 1;
-  setTimeout(() => (messageEl.style.opacity = 0), 3000);
-}
-
-function updateTurnIndicator() {
-  if (playerId === currentTurn) {
-    turnIndicator.textContent = "🎯 É a sua vez!";
-    turnIndicator.style.color = "#00ff88";
-  } else {
-    turnIndicator.textContent = "🕓 Aguardando oponente...";
-    turnIndicator.style.color = "#ffdf00";
-  }
 }

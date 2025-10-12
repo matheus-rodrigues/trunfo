@@ -1,144 +1,179 @@
-/* ======== Fundo tipo mesa de cassino ======== */
-body {
-  margin: 0;
-  padding: 0;
-  font-family: 'Poppins', sans-serif;
-  color: #fff;
-  text-align: center;
-  height: 100vh;
-  background-color: #064e3b;
-  background-image:
-    radial-gradient(circle at 30% 30%, rgba(0, 60, 0, 0.3) 0%, transparent 60%),
-    radial-gradient(circle at 70% 70%, rgba(0, 80, 0, 0.2) 0%, transparent 60%),
-    repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0, rgba(255,255,255,0.05) 2px, transparent 2px, transparent 8px);
-  background-blend-mode: overlay;
-  user-select: none;
+.main-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr 320px;
+  gap: 40px;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+  align-items: flex-start;
+  justify-content: center;
 }
-
-#game-container {
+.missions-board {
+  min-width: 260px;
+  max-width: 320px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 1.1em;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  text-align: left;
+  padding: 16px 22px;
+  grid-column: 1;
+  margin-top: 0;
+  margin-left: 0;
+  margin-right: auto;
+}
+.players-board {
+  min-width: 260px;
+  max-width: 320px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 1.1em;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  text-align: left;
+  padding: 16px 22px;
+  grid-column: 3;
+  margin-top: 0;
+  margin-right: 0;
+  margin-left: auto;
+}
+.center-board {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 25px;
+  justify-content: flex-start;
+  grid-column: 2;
 }
-
-/* ======== Cabeçalho ======== */
-h1 {
-  font-size: 2.2rem;
-  margin-bottom: 10px;
-  color: #f0f0f0;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+.score-bar {
+  font-size: 2em;
+  color: #ffd700;
+  font-weight: bold;
+  margin: 18px auto 0 auto;
+  text-align: center;
+  background: rgba(0,0,0,0.18);
+  border-radius: 8px;
+  max-width: 340px;
+  padding: 10px 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
-
-#turn-indicator {
-  font-size: 1.2rem;
-  font-weight: 600;
-  margin: 8px 0 12px;
-  color: #ffdf00;
-  text-shadow: 0 0 4px rgba(255, 223, 0, 0.4);
+/* Missões concluídas no painel de jogadores */
+.players-board ul li {
+  text-decoration: line-through;
+  color: #aaa;
+}
+.players-board ul li span {
+  color: #ffd700;
+  text-decoration: none;
+}
+/* Painel de missões concluídas */
+.missions-board {
+  margin: 16px auto 0 auto;
+  padding: 12px 24px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 1.1em;
+  max-width: 500px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  text-align: left;
+  min-height: 32px;
+}
+.missions-board h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.15em;
+  color: #ffd700;
+}
+.missions-board ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.missions-board li {
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+.card:hover {
+  transform: scale(1.08);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  border: 2px solid #ffd700;
+  cursor: pointer;
+}
+body {
+  background: url('./src/background.jpg') center/cover no-repeat;
+  font-family: 'Segoe UI', sans-serif;
+  color: white;
+  text-align: center;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
 }
 
 #message {
-  color: #ffbaba;
-  font-size: 1.1rem;
-  height: 24px;
-  margin-bottom: 12px;
-  opacity: 0;
-  transition: opacity 0.4s ease;
+  font-size: 1.5em;
+  margin-top: 20px;
+  text-shadow: 0 0 6px black;
 }
 
-/* ======== Board ======== */
 .board {
   display: flex;
+  flex-direction: row;
   justify-content: center;
-  gap: 20px;
-  margin: 30px 0 40px;
+  gap: 30px;
+  margin: 40px auto;
 }
 
-.slot {
-  width: 150px;
-  height: 210px;
-  border-radius: 10px;
-  border: 2px dashed rgba(255, 255, 255, 0.25);
-  background-color: rgba(0, 0, 0, 0.15);
+.card-slot {
+  width: 140px;
+  height: 200px;
+  border: 3px solid rgba(255,255,255,0.3);
+  border-radius: 12px;
+  background: rgba(0,0,0,0.15);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: border-color 0.2s ease, transform 0.2s ease;
+  position: relative;
+  transition: transform 0.2s ease;
 }
 
-.slot:hover {
-  border-color: #ffdf00;
-  transform: scale(1.03);
+.card-slot:hover {
+  transform: scale(1.05);
 }
 
-/* ======== Cartas ======== */
+#hand {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin: 20px auto;
+  max-width: 800px;
+  width: 100%;
+  flex-wrap: nowrap;
+}
+
 .card {
   width: 120px;
-  height: 180px;
+  height: 170px;
   border-radius: 10px;
-  background: linear-gradient(160deg, #fff 0%, #f2f2f2 100%);
-  color: #000;
+  background: white;
+  font-size: 4em;
   display: flex;
+  justify-content: center;
   align-items: center;
-  justify-content: center;
-  font-size: 38px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  transition: transform 0.2s ease, box-shadow 0.3s ease, outline 0.2s ease;
+  color: black;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+  border: 2px solid #eee;
+  transition: transform 0.2s ease, border 0.2s ease;
 }
 
-.card.red {
-  color: #e32d2d;
-}
+.card.red { color: red; }
+.card.black { color: black; }
 
-.card.black {
-  color: #111;
-}
-
-.card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
-}
-
-/* ======== Seleção ======== */
 .card.selected {
-  outline: 3px solid #ffdf00;
-  transform: translateY(-8px) scale(1.05);
-  box-shadow: 0 0 10px rgba(255, 223, 0, 0.6);
+  border: 4px solid yellow;
+  transform: scale(1.1);
 }
 
-/* ======== Mão ======== */
-.hand {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 14px;
-  margin-bottom: 40px;
-}
-
-/* ======== Animação suave ao aparecer carta ======== */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(15px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.card {
-  animation: fadeInUp 0.3s ease;
-}
-
-.card, .slot {
-  transition: all 0.25s ease;
-}
-
-.card {
-  backface-visibility: hidden;
-  will-change: transform, box-shadow;
+.locked {
+  border: 3px solid #ff5555;
+  opacity: 0.6;
 }

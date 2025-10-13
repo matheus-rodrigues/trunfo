@@ -71,11 +71,6 @@ export const missionsByDifficulty = {
       points: 10,
     },
     {
-      type: "royal",
-      description: "Coloque A, K, Q, J, 10 do mesmo naipe no board.",
-      points: 10,
-    },
-    {
       type: "quad",
       description: "Forme uma quadra (4 cartas do mesmo valor) no board.",
       points: 10,
@@ -216,18 +211,6 @@ export function checkMissionCompleted(board, mission) {
     }
     return false;
   }
-
-  // Royal (A, K, Q, J, 10 do mesmo naipe)
-  if (mission.type === "royal") {
-    const needed = ["A", "K", "Q", "J", "10"];
-    const suits = [...new Set(cards.map((c) => c.suit))];
-    return suits.some((suit) =>
-      needed.every((val) =>
-        cards.some((c) => c.value === val && c.suit === suit)
-      )
-    );
-  }
-
   // Carta alta
   if (mission.type === "highcard") {
     return cards.some((c) => c.value === "A" || c.value === "K");

@@ -75,44 +75,41 @@ export class GameModel {
     this.board[slotIndex] = card;
 
     Object.values(this.players).forEach((p) => {
-      let keepValidating = true;
-      while (keepValidating) {
-        keepValidating = false;
-        for (let idx = 0; idx < p.missions.length; idx++) {
-          const mission = p.missions[idx];
-          if (
-            !mission.completed &&
-            checkMissionCompleted(this.board, mission)
-          ) {
-            const completedMission = { ...mission, completed: true };
-            p.points += completedMission.points;
-            p.completedMissions.push(completedMission);
+      Object.values(this.players).forEach((p) => {
+  let keepValidating = true;
+  while (keepValidating) {
+    keepValidating = false;
+    for (let idx = 0; idx < p.missions.length; idx++) {
+      const mission = p.missions[idx];
 
-            p.missions.splice(idx, 1);
-            const newMission = {
-              ...getNewMissionOfSameDifficulty(completedMission),
-              completed: false,
-            };
-            p.missions.splice(idx, 0, newMission);
+      if (!mission.completed && checkMissionCompleted(this.board, mission)) {
+        const completedMission = { ...mission, completed: true };
+        p.points += completedMission.points;
+        p.completedMissions.push(completedMission);
 
-            if (checkMissionCompleted(this.board, newMission)) {
-              const completedNewMission = { ...newMission, completed: true };
-              p.points += completedNewMission.points;
-              p.completedMissions.push(completedNewMission);
-              p.missions.splice(idx, 1);
-              const anotherMission = {
-                ...getNewMissionOfSameDifficulty(completedNewMission),
-                completed: false,
-              };
-              p.missions.splice(idx, 0, anotherMission);
-              keepValidating = true;
-            }
+        // Remove missão atual completada
+        p.missions.splice(idx, 1);
 
-            keepValidating = true;
-            break;
-          }
-        }
+        // Sorteia uma nova missão até que ela não esteja completa no board atual
+        let newMission;
+        do {
+          newMission = {
+            ...getNewMissionOfSameDifficulty(completedMission),
+            completed: false,
+          };
+        } while (checkMissionCompleted(this.board, newMission));
+
+        // Adiciona missão nova
+        p.missions.splice(idx, 0, newMission);
+
+        // Caso essa nova também se torne completa (por erro de lógica futura), continua validando
+        keepValidating = true;
+        break;
       }
+    }
+  }
+});
+
     });
 
     if (!boardIsFull && this.board.every((c) => c !== null)) {

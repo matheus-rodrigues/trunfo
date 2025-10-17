@@ -1,15 +1,36 @@
-const socket = io();
+// Gera ou recupera um playerId persistente
+function getOrCreatePlayerId() {
+  let pid = localStorage.getItem("playerId");
+  if (!pid) {
+    pid = "p_" + Math.random().toString(36).slice(2) + Date.now();
+    localStorage.setItem("playerId", pid);
+  }
+  return pid;
+}
+const playerId = getOrCreatePlayerId();
+
+const socket = io({
+  auth: { playerId },
+});
 
 const boardEl = document.getElementById("board");
 const handEl = document.getElementById("hand");
 const messageEl = document.getElementById("message");
 let state = {};
+let paused = false;
 const missionsBoardEl = document.getElementById("missions-board");
 const playersBoardEl = document.getElementById("players-board");
 const scoreBarEl = document.getElementById("score-bar");
 
 socket.on("waiting", (msg) => {
   messageEl.textContent = msg;
+  paused = true;
+  // Limpa o board e painéis para indicar pausa
+  boardEl.innerHTML = "";
+  handEl.innerHTML = "";
+  missionsBoardEl.innerHTML = "";
+  playersBoardEl.innerHTML = "";
+  scoreBarEl.innerHTML = "";
 });
 
 socket.on("errorMessage", (msg) => {
@@ -18,14 +39,22 @@ socket.on("errorMessage", (msg) => {
 
 socket.on("state", (gameState) => {
   state = gameState;
-  // Limpa mensagem de espera ao receber o estado do jogo
-  messageEl.textContent = "";
-  renderGame();
+  // Só retoma se houver 2 jogadores
+  if (state.players && Object.keys(state.players).length === 2) {
+    paused = false;
+    messageEl.textContent = "";
+    renderGame();
+  }
 });
 
 function renderGame() {
   // Pontuação centralizada (jogador1 X jogador2) e vez do jogador
+  if (paused) {
+    // Não renderiza nada se estiver pausado
+    return;
+  }
   if (state.players) {
+    const localPlayerId = localStorage.getItem("playerId") || playerId;
     const playersArr = Object.values(state.players);
     let scoreText = "";
     if (playersArr.length === 2) {
@@ -39,22 +68,31 @@ function renderGame() {
         playersArr[0].points || 0
       }</span> <span style='color:#ffd700'>X</span> <span style='color:#fff'>0</span>`;
     }
-    let vezText = `Vez de: ${
-      state.currentTurn === socket.id ? "Você" : "Oponente"
-    }`;
-    scoreBarEl.innerHTML = `${scoreText}<br><span style='font-size:0.7em;color:#fff'>${vezText}</span>`;
+    let vezText;
+    if (!state.currentTurn) {
+      vezText = "";
+    } else if (state.currentTurn === localPlayerId) {
+      vezText = "Vez de: Você";
+    } else {
+      // Descobre o nome do oponente
+      const oponente = playersArr.find((p) => p.id === state.currentTurn);
+      vezText = oponente ? `Vez de: Oponente` : "Vez de: Oponente";
+    }
+    let turnoText = `<span style='font-size:0.8em;color:#ffd700'>Turno: ${
+      state.turnCount || 1
+    }</span>`;
+    scoreBarEl.innerHTML = `${scoreText}<br>${turnoText}<br><span style='font-size:0.7em;color:#fff'>${vezText}</span>`;
 
     // Missões concluídas à direita (usa completedMissions)
     let completedHtml = playersArr
       .map((p) => {
         let completed = p.completedMissions || [];
-        if (!completed.length)
-          return `<div style='margin-bottom:18px'><strong>Jogador ${
-            p.id === socket.id ? "(Você)" : p.id
-          }</strong><br><span style='color:#aaa'>Nenhuma missão concluída</span></div>`;
-        return `<div style='margin-bottom:18px'><strong>Jogador ${
-          p.id === socket.id ? "(Você)" : p.id
-        }</strong><ul>${completed
+        // Pega as 3 mais recentes
+        const recent = completed.slice(-3).reverse();
+        const nome = p.id === localPlayerId ? "(Você)" : "Oponente";
+        if (!recent.length)
+          return `<div style='margin-bottom:18px'><strong>Jogador ${nome}</strong><br><span style='color:#aaa'>Nenhuma missão concluída</span></div>`;
+        return `<div style='margin-bottom:18px'><strong>Jogador ${nome}</strong><ul>${recent
           .map(
             (m) =>
               `<li><span style='color:#ffd700'>${m.description}</span> <span style='color:#aaa'>[${m.points} pts]</span></li>`
@@ -62,12 +100,13 @@ function renderGame() {
           .join("")}</ul></div>`;
       })
       .join("");
-    playersBoardEl.innerHTML = `<h3>Missões concluídas</h3>${completedHtml}`;
+    playersBoardEl.innerHTML = `<h3>Missões concluídas: </h3>${completedHtml}`;
   }
   if (!state || !state.players) return;
 
-  const playerId = socket.id;
-  const player = state.players[playerId];
+  // Usa playerId persistente para identificar o jogador
+  const localPlayerId = localStorage.getItem("playerId") || playerId;
+  const player = state.players && state.players[localPlayerId];
   if (!player) {
     messageEl.textContent = "Aguardando outro jogador...";
     return;

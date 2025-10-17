@@ -12,11 +12,6 @@ export const missionsByDifficulty = {
       points: 2,
     },
     {
-      type: "highcard",
-      description: "Tenha a carta mais alta no board (A ou K).",
-      points: 2,
-    },
-    {
       type: "redcard",
       description: "Coloque 3 cartas vermelhas no board.",
       points: 2,
@@ -211,11 +206,6 @@ export function checkMissionCompleted(board, mission) {
     }
     return false;
   }
-  // Carta alta
-  if (mission.type === "highcard") {
-    return cards.some((c) => c.value === "A" || c.value === "K");
-  }
-
   // 3 cartas vermelhas
   if (mission.type === "redcard") {
     return cards.filter((c) => c.color === "red").length >= 3;

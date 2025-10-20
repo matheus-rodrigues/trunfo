@@ -1,5 +1,5 @@
 export function generateDeck() {
-  const suits = ["♠", "♥", "♦", "♣"];
+  const suits = ["♣", "♥", "♦", "♠"]; // Ordem do SVG: Paus, Copas, Ouros, Espadas
   const values = [
     "A",
     "2",

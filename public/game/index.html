@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Poker Mission Game</title>
+    <link rel="stylesheet" href="/game/style.css" />
+    <link rel="stylesheet" href="/game/cards.css" />
+  </head>
+  <body>
+    <h1>TRUNFO!</h1>
+
+    <!-- Notificação de missão completa -->
+    <div id="mission-notification" class="mission-notification hidden">
+      <div class="notification-content">
+        <div class="notification-icon">🎉</div>
+        <div class="notification-text">
+          <strong id="notification-player"></strong>
+          <span id="notification-message"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tela de fim de jogo -->
+    <div id="game-over-screen" class="game-over-screen hidden">
+      <div class="game-over-content">
+        <div class="game-over-trophy">🏆</div>
+        <div class="game-over-title">VITÓRIA!</div>
+        <div class="game-over-winner">
+          Vencedor: <strong id="winner-name"></strong>
+        </div>
+        <div class="game-over-scores">
+          <h3>Pontuação Final</h3>
+          <div id="final-scores"></div>
+        </div>
+        <button class="game-over-button" onclick="window.location.href='/'">
+          Voltar ao Menu
+        </button>
+      </div>
+    </div>
+
+    <div class="main-layout">
+      <div id="missions-board" class="missions-board"></div>
+      <div class="center-board">
+        <div id="score-bar" class="score-bar"></div>
+        <div id="message"></div>
+        <div id="board" class="board"></div>
+        <div id="hand"></div>
+      </div>
+      <div id="players-board" class="players-board"></div>
+    </div>
+
+    <!-- Chat in-game -->
+    <div id="chat-container" class="chat-container">
+      <div class="chat-header">
+        <span>💬 Chat</span>
+        <button id="chat-toggle" class="chat-toggle-btn">−</button>
+      </div>
+      <div id="chat-messages" class="chat-messages"></div>
+      <div class="chat-input-wrapper">
+        <input
+          type="text"
+          id="chat-input"
+          class="chat-input"
+          placeholder="Digite sua mensagem..."
+          maxlength="200"
+        />
+        <button id="chat-send" class="chat-send-btn">Enviar</button>
+      </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="/game/script.js"></script>
+  </body>
+</html>

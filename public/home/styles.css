@@ -1,0 +1,233 @@
+/* Reset básico */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Rubik", Arial, sans-serif;
+  overflow: hidden;
+}
+
+/* Modal Base */
+.modal.hidden { display: none; }
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.25s ease-in;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.modal-content {
+  width: 100%;
+  max-width: 22rem;
+  background: #f5f5f4;
+  border: 2px solid #34534133;
+  border-radius: 0.75rem;
+  padding: 1.5rem 1.5rem 1.75rem;
+  position: relative;
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.35);
+  font-family: "Rubik", Arial, sans-serif;
+  animation: scaleIn 0.25s ease;
+}
+
+@keyframes scaleIn { from { transform: scale(.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: #1c1917;
+}
+
+.modal-message {
+  font-size: 0.95rem;
+  line-height: 1.4;
+  color: #292524;
+  margin-bottom: 1.25rem;
+}
+
+.modal-actions { display: flex; justify-content: flex-end; }
+
+.modal-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #166534;
+  transition: color 0.2s;
+}
+.modal-close:hover { color: #15803d; }
+
+/* Container principal */
+.container {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 2rem 1rem 3rem;
+}
+
+/* Background animado */
+.background-animated {
+  position: absolute;
+  inset: 0;
+  background-image: url("../src/background.jpg");
+  background-repeat: repeat;
+  background-size: 200% 200%;
+  animation: pan-background 20s linear infinite;
+}
+
+@keyframes pan-background {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 100% 100%;
+  }
+}
+
+/* Overlay para contraste */
+.overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* Conteúdo principal */
+.content {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 28rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4rem;
+}
+
+/* Título */
+.title {
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 10rem;
+  line-height: 1;
+  font-weight: 900;
+  text-align: center;
+  color: #fefce8;
+  letter-spacing: -0.025em;
+  text-shadow: 0 0 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 0, 0, 0.9), 4px 4px 8px rgba(0, 0, 0, 0.9);
+  -webkit-text-stroke: 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Card */
+.card {
+  width: 100%;
+  padding: 2rem;
+  background-color: rgba(245, 245, 244, 0.7);
+  backdrop-filter: blur(12px);
+  border-radius: 0.75rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border: 2px solid rgba(52, 83, 65, 0.2);
+}
+
+.form-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Input group */
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.label {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #1c1917;
+}
+
+.input {
+  height: 3rem;
+  font-size: 1rem;
+  padding: 0.5rem 0.75rem;
+  background-color: #ffffff;
+  border: 2px solid #e7e5e4;
+  border-radius: 0.5rem;
+  font-family: "Rubik", Arial, sans-serif;
+  transition: border-color 0.2s;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #345341;
+}
+
+.input::placeholder {
+  color: #a8a29e;
+}
+
+/* Button group */
+.button-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.button {
+  width: 100%;
+  height: 3rem;
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: "Rubik", Arial, sans-serif;
+  border: 2px solid #15803d;
+  color: #166534;
+  background-color: transparent;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s;
+}
+
+.button:hover {
+  background-color: #15803d;
+  color: #ffffff;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.button:active {
+  transform: scale(0.98);
+}
+
+/* Responsividade */
+@media (max-width: 640px) {
+  .title {
+    font-size: 6rem;
+  }
+
+  .content {
+    gap: 2rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .title {
+    font-size: 4rem;
+  }
+}

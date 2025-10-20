@@ -1,0 +1,222 @@
+/* Card Sprite Sheet Mapping */
+.card-image {
+  width: 144px;
+  height: 200px;
+  background-image: url('/src/PlayingCards.svg');
+  background-size: 1872px 800px;
+  background-repeat: no-repeat;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+.card-image.card-AC {
+  background-position: 0px 0px;
+}
+
+.card-image.card-2C {
+  background-position: -144px 0px;
+}
+
+.card-image.card-3C {
+  background-position: -288px 0px;
+}
+
+.card-image.card-4C {
+  background-position: -432px 0px;
+}
+
+.card-image.card-5C {
+  background-position: -576px 0px;
+}
+
+.card-image.card-6C {
+  background-position: -720px 0px;
+}
+
+.card-image.card-7C {
+  background-position: -864px 0px;
+}
+
+.card-image.card-8C {
+  background-position: -1008px 0px;
+}
+
+.card-image.card-9C {
+  background-position: -1152px 0px;
+}
+
+.card-image.card-10C {
+  background-position: -1296px 0px;
+}
+
+.card-image.card-JC {
+  background-position: -1440px 0px;
+}
+
+.card-image.card-QC {
+  background-position: -1584px 0px;
+}
+
+.card-image.card-KC {
+  background-position: -1728px 0px;
+}
+
+.card-image.card-AH {
+  background-position: 0px -200px;
+}
+
+.card-image.card-2H {
+  background-position: -144px -200px;
+}
+
+.card-image.card-3H {
+  background-position: -288px -200px;
+}
+
+.card-image.card-4H {
+  background-position: -432px -200px;
+}
+
+.card-image.card-5H {
+  background-position: -576px -200px;
+}
+
+.card-image.card-6H {
+  background-position: -720px -200px;
+}
+
+.card-image.card-7H {
+  background-position: -864px -200px;
+}
+
+.card-image.card-8H {
+  background-position: -1008px -200px;
+}
+
+.card-image.card-9H {
+  background-position: -1152px -200px;
+}
+
+.card-image.card-10H {
+  background-position: -1296px -200px;
+}
+
+.card-image.card-JH {
+  background-position: -1440px -200px;
+}
+
+.card-image.card-QH {
+  background-position: -1584px -200px;
+}
+
+.card-image.card-KH {
+  background-position: -1728px -200px;
+}
+
+.card-image.card-AD {
+  background-position: 0px -400px;
+}
+
+.card-image.card-2D {
+  background-position: -144px -400px;
+}
+
+.card-image.card-3D {
+  background-position: -288px -400px;
+}
+
+.card-image.card-4D {
+  background-position: -432px -400px;
+}
+
+.card-image.card-5D {
+  background-position: -576px -400px;
+}
+
+.card-image.card-6D {
+  background-position: -720px -400px;
+}
+
+.card-image.card-7D {
+  background-position: -864px -400px;
+}
+
+.card-image.card-8D {
+  background-position: -1008px -400px;
+}
+
+.card-image.card-9D {
+  background-position: -1152px -400px;
+}
+
+.card-image.card-10D {
+  background-position: -1296px -400px;
+}
+
+.card-image.card-JD {
+  background-position: -1440px -400px;
+}
+
+.card-image.card-QD {
+  background-position: -1584px -400px;
+}
+
+.card-image.card-KD {
+  background-position: -1728px -400px;
+}
+
+.card-image.card-AS {
+  background-position: 0px -600px;
+}
+
+.card-image.card-2S {
+  background-position: -144px -600px;
+}
+
+.card-image.card-3S {
+  background-position: -288px -600px;
+}
+
+.card-image.card-4S {
+  background-position: -432px -600px;
+}
+
+.card-image.card-5S {
+  background-position: -576px -600px;
+}
+
+.card-image.card-6S {
+  background-position: -720px -600px;
+}
+
+.card-image.card-7S {
+  background-position: -864px -600px;
+}
+
+.card-image.card-8S {
+  background-position: -1008px -600px;
+}
+
+.card-image.card-9S {
+  background-position: -1152px -600px;
+}
+
+.card-image.card-10S {
+  background-position: -1296px -600px;
+}
+
+.card-image.card-JS {
+  background-position: -1440px -600px;
+}
+
+.card-image.card-QS {
+  background-position: -1584px -600px;
+}
+
+.card-image.card-KS {
+  background-position: -1728px -600px;
+}
+

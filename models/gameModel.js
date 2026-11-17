@@ -20,9 +20,21 @@ export class GameModel {
     this.moveHistory = [];
     this.gameOver = false;
     this.winner = null;
+    this.discardPile = []; // Pilha de cartas descartadas/sobrescritas
   }
 
   drawCard(deck) {
+    // Se o deck estiver vazio, embaralhe as cartas descartadas de volta
+    if (deck.length === 0 && this.discardPile.length > 0) {
+      this.deck = this.discardPile.sort(() => Math.random() - 0.5);
+      this.discardPile = [];
+    }
+    
+    // Se ainda estiver vazio, retorna null (jogo deve tratar isso)
+    if (deck.length === 0) {
+      return null;
+    }
+    
     return deck.pop();
   }
 
@@ -110,8 +122,23 @@ export class GameModel {
       return { error: "Não é a sua vez!" };
     }
 
-    if (!this.players[playerId] || !this.players[playerId].hand[cardIndex]) {
+    const player = this.players[playerId];
+    if (!player) {
+      return { error: "Jogador não encontrado!" };
+    }
+
+    // Validação de cardIndex
+    if (!Number.isInteger(cardIndex) || cardIndex < 0 || cardIndex >= player.hand.length) {
+      return { error: "Índice de carta inválido!" };
+    }
+
+    if (!player.hand[cardIndex]) {
       return { error: "Carta inválida!" };
+    }
+
+    // Validação de slotIndex
+    if (!Number.isInteger(slotIndex) || slotIndex < 0 || slotIndex > 4) {
+      return { error: "Posição no board inválida!" };
     }
 
     const boardIsFull = this.board.every((c) => c !== null);
@@ -123,7 +150,13 @@ export class GameModel {
       return { error: "Este slot está bloqueado!" };
     }
 
-    const card = this.players[playerId].hand.splice(cardIndex, 1)[0];
+    const card = player.hand.splice(cardIndex, 1)[0];
+    
+    // Se estamos sobrepondo uma carta, adiciona a antiga à pilha de descarte
+    if (this.board[slotIndex]) {
+      this.discardPile.push(this.board[slotIndex]);
+    }
+    
     this.board[slotIndex] = card;
 
     if (!this.moveHistory) this.moveHistory = [];
@@ -204,7 +237,13 @@ export class GameModel {
       this.lockedSlots = unique;
     }
 
-    this.players[playerId].hand.push(this.drawCard(this.deck));
+    // Compra uma nova carta (ou null se deck vazio)
+    const newCard = this.drawCard(this.deck);
+    if (newCard) {
+      this.players[playerId].hand.push(newCard);
+    }
+    // Se newCard for null, o jogador simplesmente não compra (deck esgotado)
+    
     this.turnCount = (this.turnCount || 0) + 1;
 
     // Verifica se algum jogador atingiu 50 pontos

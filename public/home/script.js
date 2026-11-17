@@ -10,20 +10,10 @@ const modalCodeCancel = document.getElementById("modal-code-cancel");
 const modalCodeConfirm = document.getElementById("modal-code-confirm");
 const joinRoomCodeInput = document.getElementById("join-room-code");
 
-function getOrCreatePlayerId() {
-  let pid = localStorage.getItem("playerId");
-  if (!pid) {
-    pid = "p_" + Math.random().toString(36).slice(2) + Date.now();
-    localStorage.setItem("playerId", pid);
-  }
-  return pid;
-}
-
-const playerId = getOrCreatePlayerId();
-
-function persistSession({ playerName, roomCode, matchType }) {
+function persistSession({ playerName, playerId, sessionToken, roomCode, matchType }) {
   localStorage.setItem("playerName", playerName);
   localStorage.setItem("playerId", playerId);
+  localStorage.setItem("sessionToken", sessionToken);
   localStorage.setItem("roomCode", roomCode);
   localStorage.setItem("matchType", matchType);
 }
@@ -111,11 +101,10 @@ async function handleCreateRoom() {
   const playerName = validatePlayerName();
   if (!playerName) return;
   try {
-    const { roomCode } = await postJSON("/api/create-room", {
+    const { roomCode, playerId, sessionToken } = await postJSON("/api/create-room", {
       playerName,
-      playerId,
     });
-    persistSession({ playerName, roomCode, matchType: "code" });
+    persistSession({ playerName, playerId, sessionToken, roomCode, matchType: "code" });
     window.location.href = "/game";
   } catch (err) {
     showError(err.message);
@@ -130,12 +119,11 @@ async function attemptJoinWithCode(inputCode) {
     return;
   }
   try {
-    const { roomCode } = await postJSON("/api/join-room", {
+    const { roomCode, playerId, sessionToken } = await postJSON("/api/join-room", {
       playerName,
-      playerId,
       roomCode: inputCode,
     });
-    persistSession({ playerName, roomCode, matchType: "code" });
+    persistSession({ playerName, playerId, sessionToken, roomCode, matchType: "code" });
     window.location.href = "/game";
   } catch (err) {
     showError(err.message);
@@ -159,12 +147,11 @@ async function handlePlayRandom() {
   if (!playerName) return;
 
   try {
-    const { roomCode } = await postJSON("/api/join-random", {
+    const { roomCode, playerId, sessionToken } = await postJSON("/api/join-random", {
       playerName,
-      playerId,
     });
     // Persistimos o roomCode internamente para handshake, mas ocultaremos na interface do jogo
-    persistSession({ playerName, roomCode, matchType: "random" });
+    persistSession({ playerName, playerId, sessionToken, roomCode, matchType: "random" });
     window.location.href = "/game";
   } catch (err) {
     showError(err.message);

@@ -1,9 +1,21 @@
 import { GameModel } from "../models/gameModel.js";
+import crypto from "crypto";
 
 // Estruturas para salas e pareamento
 const rooms = new Map(); // roomCode -> { code, mode, game, players: Map<playerId, meta> }
 const playerToRoom = new Map(); // playerId -> roomCode
 const waitingRandomRooms = []; // roomCodes aguardando adversário aleatório
+const sessionTokens = new Map(); // playerId -> sessionToken
+
+// Gera um token de sessão único e seguro
+function generateSessionToken() {
+  return crypto.randomBytes(32).toString("hex");
+}
+
+// Gera um playerId único
+function generatePlayerId() {
+  return "p_" + crypto.randomBytes(16).toString("hex");
+}
 
 function generateRoomCode() {
   const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -14,6 +26,11 @@ function generateRoomCode() {
       .join("");
   } while (rooms.has(code));
   return code;
+}
+
+// Valida o token de sessão
+function validateSession(playerId, sessionToken) {
+  return sessionTokens.get(playerId) === sessionToken;
 }
 
 function normalizeCode(code) {
@@ -59,32 +76,42 @@ function cleanupRoomIfEmpty(roomCode) {
   }
 }
 
-export function setupLobbyRoutes(app) {
-  app.post("/api/create-room", (req, res) => {
-    const { playerName, playerId } = req.body || {};
-    if (!playerName || !playerId) {
+export function setupLobbyRoutes(app, rateLimiter) {
+  app.post("/api/create-room", rateLimiter, (req, res) => {
+    const { playerName } = req.body || {};
+    if (!playerName || typeof playerName !== "string" || !playerName.trim()) {
       return res
         .status(400)
-        .json({ error: "Nome e identificador do jogador são obrigatórios." });
+        .json({ error: "Nome do jogador é obrigatório." });
     }
+
+    // Gera playerId e token no servidor
+    const playerId = generatePlayerId();
+    const sessionToken = generateSessionToken();
+    sessionTokens.set(playerId, sessionToken);
 
     const roomCode = generateRoomCode();
     const room = ensureRoom(roomCode, "code");
 
     try {
-      registerPlayer(room, playerId, playerName);
+      registerPlayer(room, playerId, playerName.trim().slice(0, 50));
     } catch (err) {
       return res.status(400).json({ error: err.message });
     }
 
-    return res.json({ roomCode, playerId });
+    return res.json({ roomCode, playerId, sessionToken });
   });
 
-  app.post("/api/join-room", (req, res) => {
-    const { playerName, playerId, roomCode } = req.body || {};
-    if (!playerName || !playerId || !roomCode) {
+  app.post("/api/join-room", rateLimiter, (req, res) => {
+    const { playerName, roomCode } = req.body || {};
+    if (!playerName || typeof playerName !== "string" || !playerName.trim()) {
       return res.status(400).json({
-        error: "Nome, identificador e código da sala são obrigatórios.",
+        error: "Nome do jogador é obrigatório.",
+      });
+    }
+    if (!roomCode || typeof roomCode !== "string") {
+      return res.status(400).json({
+        error: "Código da sala é obrigatório.",
       });
     }
 
@@ -94,22 +121,32 @@ export function setupLobbyRoutes(app) {
       return res.status(404).json({ error: "Sala não encontrada." });
     }
 
+    // Gera playerId e token no servidor
+    const playerId = generatePlayerId();
+    const sessionToken = generateSessionToken();
+    sessionTokens.set(playerId, sessionToken);
+
     try {
-      registerPlayer(room, playerId, playerName);
+      registerPlayer(room, playerId, playerName.trim().slice(0, 50));
     } catch (err) {
       return res.status(400).json({ error: err.message });
     }
 
-    return res.json({ roomCode: normalized, playerId });
+    return res.json({ roomCode: normalized, playerId, sessionToken });
   });
 
-  app.post("/api/join-random", (req, res) => {
-    const { playerName, playerId } = req.body || {};
-    if (!playerName || !playerId) {
+  app.post("/api/join-random", rateLimiter, (req, res) => {
+    const { playerName } = req.body || {};
+    if (!playerName || typeof playerName !== "string" || !playerName.trim()) {
       return res
         .status(400)
-        .json({ error: "Nome e identificador do jogador são obrigatórios." });
+        .json({ error: "Nome do jogador é obrigatório." });
     }
+
+    // Gera playerId e token no servidor
+    const playerId = generatePlayerId();
+    const sessionToken = generateSessionToken();
+    sessionTokens.set(playerId, sessionToken);
 
     let roomCode;
     while (waitingRandomRooms.length) {
@@ -118,12 +155,12 @@ export function setupLobbyRoutes(app) {
       if (candidateRoom && candidateRoom.players.size < 2) {
         roomCode = candidate;
         try {
-          registerPlayer(candidateRoom, playerId, playerName);
+          registerPlayer(candidateRoom, playerId, playerName.trim().slice(0, 50));
         } catch (err) {
           return res.status(400).json({ error: err.message });
         }
         candidateRoom.mode = "random";
-        return res.json({ roomCode, playerId });
+        return res.json({ roomCode, playerId, sessionToken });
       }
     }
 
@@ -131,13 +168,13 @@ export function setupLobbyRoutes(app) {
     const room = ensureRoom(roomCode, "random");
 
     try {
-      registerPlayer(room, playerId, playerName);
+      registerPlayer(room, playerId, playerName.trim().slice(0, 50));
     } catch (err) {
       return res.status(400).json({ error: err.message });
     }
 
     waitingRandomRooms.push(roomCode);
-    return res.json({ roomCode, playerId });
+    return res.json({ roomCode, playerId, sessionToken });
   });
 }
 
@@ -145,14 +182,23 @@ export function setupGameController(io) {
   io.on("connection", (socket) => {
     const auth = socket.handshake.auth || {};
     const playerId = auth.playerId;
+    const sessionToken = auth.sessionToken;
     const playerName = auth.playerName;
     const roomCode = normalizeCode(auth.roomCode);
 
-    if (!playerId || !roomCode) {
+    // Validação de autenticação
+    if (!playerId || !sessionToken || !roomCode) {
       socket.emit(
         "errorMessage",
         "Não foi possível identificar a sala ou o jogador."
       );
+      socket.disconnect(true);
+      return;
+    }
+
+    // Valida o token de sessão
+    if (!validateSession(playerId, sessionToken)) {
+      socket.emit("errorMessage", "Sessão inválida ou expirada.");
       socket.disconnect(true);
       return;
     }
@@ -195,21 +241,55 @@ export function setupGameController(io) {
       });
     }
 
+    // Throttling simples: limita eventos por socket
+    const throttle = {
+      chatMessage: { lastTime: 0, minInterval: 500 }, // 500ms entre mensagens
+      playCard: { lastTime: 0, minInterval: 300 }, // 300ms entre jogadas
+    };
+
     // Handler de mensagens do chat
     socket.on("chatMessage", ({ message }) => {
+      // Throttling
+      const now = Date.now();
+      if (now - throttle.chatMessage.lastTime < throttle.chatMessage.minInterval) {
+        return; // Ignora silenciosamente se muito rápido
+      }
+      throttle.chatMessage.lastTime = now;
+
       if (!message || typeof message !== "string") return;
 
       const sanitized = message.trim().slice(0, 200);
       if (!sanitized) return;
 
+      // Validação adicional: remove caracteres potencialmente perigosos
+      const safe = sanitized.replace(/[<>]/g, "");
+
       io.to(roomCode).emit("chatMessage", {
         playerName: meta.name,
-        message: sanitized,
+        message: safe,
       });
     });
 
     socket.on("playCard", ({ cardIndex, slotIndex }) => {
-      const result = room.game.playCard(playerId, cardIndex, slotIndex);
+      // Throttling
+      const now = Date.now();
+      if (now - throttle.playCard.lastTime < throttle.playCard.minInterval) {
+        socket.emit("errorMessage", "Aguarde um momento antes de jogar novamente.");
+        return;
+      }
+      throttle.playCard.lastTime = now;
+
+      // Converte para inteiros para validação
+      const cardIdx = parseInt(cardIndex, 10);
+      const slotIdx = parseInt(slotIndex, 10);
+
+      // O gameModel já valida, mas fazemos uma verificação básica aqui também
+      if (!Number.isInteger(cardIdx) || !Number.isInteger(slotIdx)) {
+        socket.emit("errorMessage", "Dados inválidos.");
+        return;
+      }
+
+      const result = room.game.playCard(playerId, cardIdx, slotIdx);
       if (result.error) {
         socket.emit("errorMessage", result.error);
         return;

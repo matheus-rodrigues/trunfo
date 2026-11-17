@@ -23,19 +23,19 @@ export class GameModel {
     this.discardPile = []; // Pilha de cartas descartadas/sobrescritas
   }
 
-  drawCard(deck) {
+  drawCard() {
     // Se o deck estiver vazio, embaralhe as cartas descartadas de volta
-    if (deck.length === 0 && this.discardPile.length > 0) {
+    if (this.deck.length === 0 && this.discardPile.length > 0) {
       this.deck = this.discardPile.sort(() => Math.random() - 0.5);
       this.discardPile = [];
     }
     
     // Se ainda estiver vazio, retorna null (jogo deve tratar isso)
-    if (deck.length === 0) {
+    if (this.deck.length === 0) {
       return null;
     }
     
-    return deck.pop();
+    return this.deck.pop();
   }
 
   addPlayer(id, name = "Jogador") {
@@ -193,12 +193,20 @@ export class GameModel {
             p.missions.splice(idx, 1);
 
             // Sorteia uma nova missão até que ela não esteja completa no board atual
+            // Limite de tentativas para evitar loop infinito (caso raro onde todas missões da dificuldade estão completas)
             let newMission;
+            let attempts = 0;
+            const maxAttempts = 50;
             do {
               newMission = {
                 ...getNewMissionOfSameDifficulty(completedMission),
                 completed: false,
               };
+              attempts++;
+              if (attempts >= maxAttempts) {
+                // Fallback: aceita missão mesmo se completa (jogador ganha pontos imediatamente)
+                break;
+              }
             } while (checkMissionCompleted(this.board, newMission));
 
             // Adiciona missão nova
@@ -214,6 +222,7 @@ export class GameModel {
 
     if (!boardIsFull && this.board.every((c) => c !== null)) {
       // Board ficou cheio pela primeira vez
+      // Trava os últimos 2 slots únicos jogados (se o mesmo slot foi jogado 2x seguidas, só trava 1 vez + anterior)
       const unique = [];
       for (
         let i = this.moveHistory.length - 1;
@@ -225,6 +234,7 @@ export class GameModel {
       }
       this.lockedSlots = unique;
     } else if (boardIsFull) {
+      // Atualiza slots travados: sempre os últimos 2 slots únicos da jogada
       const unique = [];
       for (
         let i = this.moveHistory.length - 1;
@@ -238,7 +248,7 @@ export class GameModel {
     }
 
     // Compra uma nova carta (ou null se deck vazio)
-    const newCard = this.drawCard(this.deck);
+    const newCard = this.drawCard();
     if (newCard) {
       this.players[playerId].hand.push(newCard);
     }

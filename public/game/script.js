@@ -1,27 +1,19 @@
 // Import card mapping utilities
 import { getCardClass } from "./cardMapping.js";
 
-// Gera ou recupera um playerId persistente
-function getOrCreatePlayerId() {
-  let pid = localStorage.getItem("playerId");
-  if (!pid) {
-    pid = "p_" + Math.random().toString(36).slice(2) + Date.now();
-    localStorage.setItem("playerId", pid);
-  }
-  return pid;
-}
-const playerId = getOrCreatePlayerId();
+const playerId = localStorage.getItem("playerId");
+const sessionToken = localStorage.getItem("sessionToken");
 const playerName = localStorage.getItem("playerName") || "Jogador";
 const roomCode = localStorage.getItem("roomCode");
 const matchType = localStorage.getItem("matchType") || "code";
 
 // Para partidas aleatórias, o roomCode existe internamente mas não será mostrado.
-if (!roomCode) {
+if (!roomCode || !playerId || !sessionToken) {
   window.location.href = "/";
 }
 
 const socket = io({
-  auth: { playerId, playerName, roomCode },
+  auth: { playerId, sessionToken, playerName, roomCode },
 });
 
 const boardEl = document.getElementById("board");

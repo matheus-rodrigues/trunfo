@@ -5,7 +5,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "kill-port 3000 && nodemon server.js"
+    "dev": "kill-port 3000 && nodemon server.js",
+    "test": "node --test tests/**/*.test.js",
+    "test:smoke": "node tests/smokeTest.js"
   },
   "dependencies": {
     "express": "^4.21.2",
